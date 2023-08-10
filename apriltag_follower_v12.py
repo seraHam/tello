@@ -16,7 +16,7 @@ S = 60 #speed
 FPS = 20 #frame per second
 
 LINE_LENGTH = 5 #length of the crosshair lines
-ENTER_COLOR = (255, 0, 0) #color of the crosshair
+CENTER_COLOR = (255, 0, 0) #color of the crosshair
 CORNER_COLOR = (0, 255, 180) #color of the corners
 
 ddesired = 1 #(meters) desired distance from the tag
