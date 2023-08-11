@@ -13,7 +13,7 @@ S = 60
 # 较低的帧数会导致输入延迟，因为一帧只会处理一次输入信息
 FPS = 30
 
-goal_loc = [1.0, 0.0]
+goal_loc = [2.0, 0.0, 2.0]
 
 class FrontEnd(object):
     """ Maintains the Tello display and moves it through the keyboard keys.
@@ -89,10 +89,12 @@ class FrontEnd(object):
         pos_ax = np.array([] * 0).reshape(0, 1)
         pos_ay = np.array([] * 0).reshape(0, 1)
         pos_az = np.array([] * 0).reshape(0, 1)
+        pos_baro = np.array([] * 0).reshape(0, 1)
         ax_dt2 = 0
         ay_dt2 = 0
         az_dt2 = 0
         dt = 1 / 300
+        pos_baro_init = 0
 
         while not should_stop:
 
@@ -101,7 +103,12 @@ class FrontEnd(object):
             vy = self.tello.get_speed_y()
             vz = self.tello.get_speed_z()
 
-            print('vx: ', vx, ' vy: ', vy, ' vz:', vz)
+            baro_h = self.tello.get_barometer()
+
+            # print('vx: ', vx, ' vy: ', vy, ' vz:', vz)
+            
+
+            # print(baro_h)
             # print(data_read)
 
             # vx = np.array([data_read["vgx"]])
@@ -110,10 +117,12 @@ class FrontEnd(object):
                 # print(key, data_read[key])
 
             # time.sleep(1)
-
+            h = self.tello.get_height()
             x = vx
             y = vy
-            z = vz
+            z = h / 100
+
+            print(z)
             
             ax_dt2_temp = self.tello.get_acceleration_x() / 100
             
@@ -127,9 +136,15 @@ class FrontEnd(object):
 
             ax_dt2 = ax_dt2_temp
 
-            az_dt2 = (az_dt2 + self.tello.get_acceleration_z() / 100 + 10.14) / 2
+            az_dt2 = (az_dt2 - self.tello.get_acceleration_z() / 100 - 10.14) / 2
 
-            pos_az = np.append(pos_az, np.array([az_dt2]))
+            pos_az = np.append(pos_az, -1 * np.array([az_dt2]))
+            
+            if pos_baro_init == 0:
+                pos_baro_init = baro_h
+
+            pos_baro_current = np.array([(baro_h- pos_baro_init) / 100.0])
+            pos_baro = np.append(pos_baro, pos_baro_current) 
 
             # print('x: ', x, ' y: ', y)
 
@@ -142,7 +157,7 @@ class FrontEnd(object):
 
             vel_command_x = int(100 * (goal_loc[0] - x))
             vel_command_y = int(100 * (goal_loc[1] - y))
-            up_down_velocity = 0
+            up_down_velocity = int(100 * (goal_loc[2] - pos_baro_current))
             for_back_velocity = vel_command_x * 0 
             left_right_velocity = vel_command_y * 0
             yaw_velocity = 0
@@ -152,7 +167,7 @@ class FrontEnd(object):
             
             # time.sleep(0.01)
 
-            if np.linalg.norm([x - goal_loc[0], y - goal_loc[1]]) < 0.1:
+            if np.linalg.norm([pos_baro_current- goal_loc[2]]) < 0.1: #np.linalg.norm([x - goal_loc[0], y - goal_loc[1]]) < 0.1:
                 self.keyup(pygame.K_l)
                 should_stop = True
                 break
@@ -191,7 +206,7 @@ class FrontEnd(object):
             frame = pygame.surfarray.make_surface(frame)
             self.screen.blit(frame, (0, 0))
             pygame.display.update()
-            time.sleep(1/100)
+            time.sleep(1/1000)
             # time.sleep(1 / FPS)
 
         # fig = plt.figure()
@@ -211,7 +226,7 @@ class FrontEnd(object):
         ax6 = ax[0, 2]
         ax6.plot(z_pl)
         ax7 = ax[1, 2]
-        ax7.plot(vz_pl)
+        ax7.plot(pos_baro)
         ax8 = ax[2, 2]
         ax8.plot(pos_az)
         
